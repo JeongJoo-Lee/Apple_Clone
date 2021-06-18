@@ -49,6 +49,14 @@
       ].objs.container.style.height = `${sceneInfo[i].scrollHeight}px`;
     }
   }
+
+  function scrollLoop() {
+    console.log(window.pageYOffset);
+  }
+
   window.addEventListener("resize", setLayout); // 창 크기 변할때마다(resize) 높이설정 변경실행(setLayout)
+  window.addEventListener("scroll", () => {
+    scrollLoop();
+  });
   setLayout();
 })();
