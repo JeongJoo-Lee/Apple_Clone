@@ -20,7 +20,11 @@
         messageD: document.querySelector("#scroll-section-0 .main-message.d"),
       },
       values: {
-        messageA_opacity: [0, 1],
+        messageA_opacity_in: [0, 1, { start: 0.1, end: 0.2 }],
+        // messageB_opacity_in: [0, 1, { start: 0.3, end: 0.4 }],
+        messageA_translateY_in: [20, 0, { start: 0.1, end: 0.2 }],
+        messageA_opacity_out: [1, 0, { start: 0.25, end: 0.3 }],
+        messageA_translateY_out: [0, -20, { start: 0.25, end: 0.3 }],
       },
     },
     {
@@ -77,9 +81,31 @@
   function calcValues(values, currentYOffset) {
     let rv;
     // 현재 scene에서 스크롤된 범위를 비율로 구하는 변수
-    let scrollRatio = currentYOffset / sceneInfo[currentScene].scrollHeight;
+    const scrollHeight = sceneInfo[currentScene].scrollHeight;
+    const scrollRatio = currentYOffset / scrollHeight;
 
-    rv = scrollRatio * (values[1] - values[0]) + values[0];
+    if (values.length === 3) {
+      // start ~ end 사이에 애니메이션 실행
+      const partScrollStart = values[2].start * scrollHeight;
+      const partScrollEnd = values[2].end * scrollHeight;
+      const partScrollHeight = partScrollEnd - partScrollStart;
+
+      if (
+        currentYOffset >= partScrollStart &&
+        currentYOffset <= partScrollEnd
+      ) {
+        rv =
+          ((currentYOffset - partScrollStart) / partScrollHeight) *
+            (values[1] - values[0]) +
+          values[0];
+      } else if (currentYOffset < partScrollStart) {
+        rv = values[0];
+      } else if (currentYOffset > partScrollEnd) {
+        rv = values[1];
+      }
+    } else {
+      rv = scrollRatio * (values[1] - values[0]) + values[0]; // 전체 스크롤 영역
+    }
 
     return rv;
   }
@@ -88,15 +114,37 @@
     const objs = sceneInfo[currentScene].objs;
     const values = sceneInfo[currentScene].values;
     const currentYOffset = yOffset - prevScrollHeight;
+    const scrollHeight = sceneInfo[currentScene].scrollHeight;
+    const scrollRatio = (yOffset - prevScrollHeight) / scrollHeight;
 
     switch (currentScene) {
       case 0:
         // console.log("0 play");
-        let messageA_opacity_in = calcValues(
-          values.messageA_opacity,
+        const messageA_opacity_in = calcValues(
+          values.messageA_opacity_in,
           currentYOffset
         );
-        objs.messageA.style.opacity = messageA_opacity_in;
+        const messageA_opacity_out = calcValues(
+          values.messageA_opacity_out,
+          currentYOffset
+        );
+        const messageA_translateY_in = calcValues(
+          values.messageA_translateY_in,
+          currentYOffset
+        );
+        const messageA_translateY_out = calcValues(
+          values.messageA_translateY_out,
+          currentYOffset
+        );
+        if (scrollRatio <= 0.22) {
+          //in
+          objs.messageA.style.opacity = messageA_opacity_in;
+          objs.messageA.style.transform = `translateY(${messageA_translateY_in}%)`;
+        } else {
+          //out
+          objs.messageA.style.opacity = messageA_opacity_out;
+          objs.messageA.style.transform = `translateY(${messageA_translateY_out}%)`;
+        }
 
         break;
 
@@ -132,7 +180,7 @@
       document.body.setAttribute("id", `show-scene-${currentScene}`);
     }
 
-    if (enterNewScene) return;
+    if (enterNewScene) return; // 씬이 바뀌는 순간만 무시해서 찰나에 생기는 이산값 발생을 방지함
 
     playAnimation();
   }
